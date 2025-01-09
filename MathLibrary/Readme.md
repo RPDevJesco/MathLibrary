@@ -32,7 +32,7 @@ MathLibrary is a comprehensive numerical and symbolic computation library implem
     - `double Evaluate(string expression)`: Parses and computes the result of the input expression.
 
 #### `ExpressionParser`
-- **Description**: Parses mathematical expressions into an abstract syntax tree (AST).
+- **Description**: Parses mathematical expressions into an abstract syntax tree (AST). adheres strictly to PEMDAS/BODMAS rules while allowing flexibility for implicit multiplication precedence.  It avoids the pitfalls of ambiguous cases by treating parentheses and implicit multiplication correctly.
 - **Methods**:
     - `ExpressionNode Parse(string expression)`: Converts an expression string into an AST.
     - `void SetVariable(string name, double value)`: Assigns values to variables in expressions.
