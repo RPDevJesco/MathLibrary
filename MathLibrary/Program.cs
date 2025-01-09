@@ -26,6 +26,7 @@ class Program
         var expressions = new[]
         {
             "8 / 2(2 + 2)",
+            "8 / (2(2 + 2))",
             "3 + 5 * 2",           // Basic arithmetic
             "(3 + 5) * 2",         // Parentheses
             "2^3",                 // Exponentiation
