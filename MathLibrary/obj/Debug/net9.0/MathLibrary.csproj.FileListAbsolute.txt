@@ -1,0 +1,14 @@
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\bin\Debug\net9.0\MathLibrary.exe
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\bin\Debug\net9.0\MathLibrary.deps.json
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\bin\Debug\net9.0\MathLibrary.runtimeconfig.json
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\bin\Debug\net9.0\MathLibrary.dll
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\bin\Debug\net9.0\MathLibrary.pdb
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.AssemblyInfoInputs.cache
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.AssemblyInfo.cs
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.csproj.CoreCompileInputs.cache
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.dll
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\refint\MathLibrary.dll
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.pdb
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.genruntimeconfig.cache
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\ref\MathLibrary.dll
