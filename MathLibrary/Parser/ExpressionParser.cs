@@ -403,61 +403,30 @@ namespace MathLibrary
                 }
             }
 
-            // Check for parenthesized expressions first
-            if (tokens[start].Type == TokenType.LeftParenthesis)
-            {
-                int parenthesesCount = 1;
-                int j = start + 1;
-                while (j <= end && parenthesesCount > 0)
-                {
-                    if (tokens[j].Type == TokenType.LeftParenthesis) parenthesesCount++;
-                    if (tokens[j].Type == TokenType.RightParenthesis) parenthesesCount--;
-                    j++;
-                }
-                if (parenthesesCount == 0 && j - 1 <= end)
-                {
-                    if (j - 1 == end)
-                        return BuildExpressionTreeRecursive(tokens, start + 1, end - 1);
-                }
-            }
-
-            // Find the operator with lowest precedence
-            int minPrecedence = int.MaxValue;
+            // Find the highest-level operator (lowest precedence) outside any parentheses
+            int parenthesesCount = 0;
             int operationIndex = -1;
-            int parenthesesLevel = 0;
+            int lowestPrecedence = int.MaxValue;
 
-            // First pass: find the minimum precedence level outside parentheses
-            for (int i = start; i <= end; i++)
+            // Scan from right to left to handle precedence correctly
+            for (int i = end; i >= start; i--)
             {
                 var token = tokens[i];
-                if (token.Type == TokenType.LeftParenthesis)
-                    parenthesesLevel++;
-                else if (token.Type == TokenType.RightParenthesis)
-                    parenthesesLevel--;
-                else if (parenthesesLevel == 0 && token.Type == TokenType.Operator)
+
+                if (token.Type == TokenType.RightParenthesis)
                 {
-                    int precedence = _operations[token.Value].Precedence;
-                    if (precedence <= minPrecedence)  // Use <= to maintain left-to-right evaluation
-                    {
-                        minPrecedence = precedence;
-                    }
+                    parenthesesCount++;
                 }
-            }
-
-            // Second pass: find the rightmost operator with the minimum precedence
-            // This ensures left-to-right evaluation for operators with equal precedence
-            for (int i = start; i <= end; i++)
-            {
-                var token = tokens[i];
-                if (token.Type == TokenType.LeftParenthesis)
-                    parenthesesLevel++;
-                else if (token.Type == TokenType.RightParenthesis)
-                    parenthesesLevel--;
-                else if (parenthesesLevel == 0 && token.Type == TokenType.Operator)
+                else if (token.Type == TokenType.LeftParenthesis)
                 {
-                    int precedence = _operations[token.Value].Precedence;
-                    if (precedence == minPrecedence)
+                    parenthesesCount--;
+                }
+                else if (parenthesesCount == 0 && token.Type == TokenType.Operator)
+                {
+                    var operation = _operations[token.Value];
+                    if (operation.Precedence <= lowestPrecedence)
                     {
+                        lowestPrecedence = operation.Precedence;
                         operationIndex = i;
                     }
                 }
@@ -473,21 +442,29 @@ namespace MathLibrary
                 );
             }
 
+            // Handle parenthesized expression
+            if (tokens[start].Type == TokenType.LeftParenthesis && tokens[end].Type == TokenType.RightParenthesis)
+            {
+                return BuildExpressionTreeRecursive(tokens, start + 1, end - 1);
+            }
+
             // Handle function calls
             if (tokens[start].Type == TokenType.Function)
             {
                 string functionName = tokens[start].Value;
+
+                // Extract arguments
                 var arguments = new List<ExpressionNode>();
-                int currentArgStart = start + 2;
-                parenthesesLevel = 1;
+                int currentArgStart = start + 2; // Skip function name and opening parenthesis
+                parenthesesCount = 1;
 
                 for (int i = currentArgStart; i < end; i++)
                 {
                     if (tokens[i].Type == TokenType.LeftParenthesis)
-                        parenthesesLevel++;
+                        parenthesesCount++;
                     else if (tokens[i].Type == TokenType.RightParenthesis)
-                        parenthesesLevel--;
-                    else if (parenthesesLevel == 1 && tokens[i].Type == TokenType.Comma)
+                        parenthesesCount--;
+                    else if (parenthesesCount == 1 && tokens[i].Type == TokenType.Comma)
                     {
                         arguments.Add(BuildExpressionTreeRecursive(tokens, currentArgStart, i - 1));
                         currentArgStart = i + 1;
@@ -497,10 +474,23 @@ namespace MathLibrary
                 if (currentArgStart < end)
                     arguments.Add(BuildExpressionTreeRecursive(tokens, currentArgStart, end - 1));
 
-                return CreateFunctionNode(functionName, arguments);
+                if (!_functions.ContainsKey(functionName))
+                    throw new ArgumentException($"Unknown function: {functionName}");
+
+                var (func, minArgs, maxArgs) = _functions[functionName];
+
+                // Validate argument count
+                if (arguments.Count < minArgs || arguments.Count > maxArgs)
+                {
+                    if (minArgs == maxArgs)
+                        throw new ArgumentException($"Function {functionName} expects {minArgs} argument(s), but got {arguments.Count}");
+                    throw new ArgumentException($"Function {functionName} expects between {minArgs} and {maxArgs} arguments, but got {arguments.Count}");
+                }
+
+                return new ExpressionNode(new FunctionOperation(functionName, func, arguments));
             }
 
-            throw new ArgumentException("Invalid expression");
+            throw new ArgumentException($"Invalid expression");
         }
         
         public List<Token> ParseAndPrintTokens(string expression)
