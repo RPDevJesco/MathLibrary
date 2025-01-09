@@ -34,66 +34,38 @@ namespace MathLibrary
 
         private void ValidateArgumentCount(List<ExpressionNode> arguments)
         {
-            switch (_name.ToLower())
+            var (minArgs, maxArgs) = GetArgumentRange(_name);
+            if (arguments.Count < minArgs || arguments.Count > maxArgs)
+            {
+                if (minArgs == maxArgs)
+                    throw new ArgumentException($"Function {_name} expects {minArgs} argument(s), but got {arguments.Count}");
+                throw new ArgumentException($"Function {_name} expects between {minArgs} and {maxArgs} arguments, but got {arguments.Count}");
+            }
+        }
+
+        private (int min, int max) GetArgumentRange(string name)
+        {
+            return name.ToLower() switch
             {
                 // Single argument functions
-                case "sin":
-                case "cos":
-                case "tan":
-                case "asin":
-                case "acos":
-                case "atan":
-                case "sinh":
-                case "cosh":
-                case "tanh":
-                case "sqrt":
-                case "cbrt":
-                case "ln":
-                case "abs":
-                case "sign":
-                case "ceil":
-                case "floor":
-                case "exp":
-                case "gamma":
-                case "besselj0":
-                case "besselj1":
-                case "erf":
-                case "erfc":
-                    if (arguments.Count != 1)
-                        throw new ArgumentException($"Function {_name} expects 1 argument, but got {arguments.Count}");
-                    break;
+                "sin" or "cos" or "tan" or "asin" or "acos" or "atan" or
+                    "sinh" or "cosh" or "tanh" or "sqrt" or "cbrt" or "ln" or
+                    "abs" or "sign" or "ceil" or "floor" or "exp" or "gamma" or
+                    "besselj0" or "besselj1" or "erf" or "erfc" => (1, 1),
 
                 // Two argument functions
-                case "pow":
-                case "atan2":
-                case "legendre":
-                case "hypergeometric2f1":
-                    if (arguments.Count != 2)
-                        throw new ArgumentException($"Function {_name} expects 2 arguments, but got {arguments.Count}");
-                    break;
+                "pow" or "atan2" or "legendre" => (2, 2),
 
                 // Variable argument functions
-                case "log":
-                case "round":
-                    if (arguments.Count < 1 || arguments.Count > 2)
-                        throw new ArgumentException($"Function {_name} expects 1 or 2 arguments, but got {arguments.Count}");
-                    break;
+                "log" or "round" => (1, 2),
+                "magnitude" => (1, int.MaxValue),
+                "dot" => (2, int.MaxValue),
+                "cross" => (6, 6),
+                "hypergeometric2f1" => (4, 4),
 
-                case "magnitude":
-                    if (arguments.Count < 1)
-                        throw new ArgumentException($"Function {_name} expects at least 1 argument, but got {arguments.Count}");
-                    break;
-
-                case "dot":
-                    if (arguments.Count < 2 || arguments.Count % 2 != 0)
-                        throw new ArgumentException($"Function {_name} expects an even number of arguments (at least 2), but got {arguments.Count}");
-                    break;
-
-                case "cross":
-                    if (arguments.Count != 6)
-                        throw new ArgumentException($"Function {_name} expects exactly 6 arguments (two 3D vectors), but got {arguments.Count}");
-                    break;
-            }
+                // Default case
+                _ => throw new ArgumentException($"Unknown function: {name}")
+            };
         }
 
         public double Execute(double left, double right)

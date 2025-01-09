@@ -22,9 +22,10 @@ class Program
     {
         Console.WriteLine("=== Basic Calculator Operations ===");
         Calculator calc = new Calculator();
-
+        
         var expressions = new[]
         {
+            "8 / 2 * (2 + 2)",
             "3 + 5 * 2",           // Basic arithmetic
             "(3 + 5) * 2",         // Parentheses
             "2^3",                 // Exponentiation
@@ -65,7 +66,7 @@ class Program
             "besselj1(1)",         // Bessel function J1
             "legendre(2, 0.5)",    // Legendre polynomial
             "erf(1)",              // Error function
-            "hypergeometric2f1(1, 1, 2, 0.5)"  // Hypergeometric function
+            "hypergeometric2f1(0.5, 0.75, 2.0, 0.5)"  // Hypergeometric with convergent parameters
         };
 
         foreach (var func in specialFunctions)
@@ -273,14 +274,14 @@ class Program
         Console.WriteLine($"Correlation: {Statistics.Correlation(data.Take(6), data2):F2}");
         Console.WriteLine();
     }
-
+    
     static void PrintMatrix(Matrix m)
     {
         for (int i = 0; i < m.Rows; i++)
         {
             for (int j = 0; j < m.Columns; j++)
             {
-                Console.Write($"{m[i,j],8:F2} ");
+                Console.Write($"{m[i, j],8:F3} ");
             }
             Console.WriteLine();
         }

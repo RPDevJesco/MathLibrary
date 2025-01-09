@@ -4,21 +4,21 @@ namespace MathLibrary
     {
         public override double Execute(double left, double right) => left + right;
         public override Complex ExecuteComplex(Complex left, Complex right) => left + right;
-        public override int Precedence => 1;
+        public override int Precedence => 1;  // Lowest precedence
     }
 
     public class Subtraction : MathOperationBase
     {
         public override double Execute(double left, double right) => left - right;
         public override Complex ExecuteComplex(Complex left, Complex right) => left - right;
-        public override int Precedence => 1;
+        public override int Precedence => 1;  // Same as addition
     }
 
     public class Multiplication : MathOperationBase
     {
         public override double Execute(double left, double right) => left * right;
         public override Complex ExecuteComplex(Complex left, Complex right) => left * right;
-        public override int Precedence => 2;
+        public override int Precedence => 2;  // Higher than addition/subtraction
     }
 
     public class Division : MathOperationBase
@@ -37,28 +37,14 @@ namespace MathLibrary
             return left / right;
         }
 
-        public override int Precedence => 2;
+        public override int Precedence => 2;  // Same as multiplication
     }
-    
- public class Exponentiation : MathOperationBase
+
+    public class Exponentiation : MathOperationBase
     {
         public override double Execute(double left, double right) => Math.Pow(left, right);
-        
-        public override Complex ExecuteComplex(Complex left, Complex right)
-        {
-            // Special cases for real exponents to avoid unnecessary complex calculations
-            if (right.Imaginary == 0)
-            {
-                // If base is negative and exponent is integer, we can do real calculation
-                if (left.Real < 0 && left.Imaginary == 0 && Math.Floor(right.Real) == right.Real)
-                {
-                    return new Complex(Math.Pow(left.Real, right.Real), 0);
-                }
-            }
-            return ComplexMath.Pow(left, right);
-        }
-
-        public override int Precedence => 3;
+        public override Complex ExecuteComplex(Complex left, Complex right) => ComplexMath.Pow(left, right);
+        public override int Precedence => 3;  // Highest precedence
     }
 
     public class Modulo : MathOperationBase
@@ -75,7 +61,7 @@ namespace MathLibrary
             throw new NotSupportedException("Complex modulo operation is not supported.");
         }
 
-        public override int Precedence => 2;
+        public override int Precedence => 2;  // Same as multiplication/division
     }
 
     public class NthRoot : MathOperationBase
@@ -93,20 +79,10 @@ namespace MathLibrary
         {
             if (right.Real == 0 && right.Imaginary == 0)
                 throw new ArgumentException("Root index cannot be zero.");
-            
-            // If dealing with real numbers and odd root, we can use the real implementation
-            if (right.Imaginary == 0 && left.Imaginary == 0 && 
-                Math.Floor(right.Real) == right.Real && 
-                (int)right.Real % 2 == 1)
-            {
-                return new Complex(Execute(left.Real, right.Real), 0);
-            }
-            
-            // For complex numbers or even roots of negative numbers, use complex power
             return ComplexMath.Pow(left, new Complex(1.0 / right.Real, -right.Imaginary / 
                 (right.Real * right.Real + right.Imaginary * right.Imaginary)));
         }
 
-        public override int Precedence => 3;
+        public override int Precedence => 3;  // Same as exponentiation
     }
 }

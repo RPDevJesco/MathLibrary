@@ -228,45 +228,26 @@ namespace MathLibrary
         public static double Erf(double x)
         {
             if (double.IsNaN(x)) return double.NaN;
-            if (double.IsInfinity(x)) return Math.Sign(x);
+            if (double.IsPositiveInfinity(x)) return 1.0;
+            if (double.IsNegativeInfinity(x)) return -1.0;
 
-            // Use series expansion for small x
-            if (Math.Abs(x) < 1)
-            {
-                double sum = x;
-                double term = x;
-                for (int n = 1; n < MaxIterations; n++)
-                {
-                    term *= -x * x / n;
-                    double addend = term / (2 * n + 1);
-                    sum += addend;
-                    if (Math.Abs(addend) < Epsilon * Math.Abs(sum))
-                        return sum * 2 / Math.Sqrt(Math.PI);
-                }
-            }
+            // Constants
+            const double a1 = 0.254829592;
+            const double a2 = -0.284496736;
+            const double a3 = 1.421413741;
+            const double a4 = -1.453152027;
+            const double a5 = 1.061405429;
+            const double p = 0.3275911;
 
-            // Use continued fraction for large x
-            if (x < 0) return -Erf(-x);
-            double a = 1;
-            double b = x;
-            double c = 0;
-            double d = 1 / b;
-            double h = d;
-            for (int i = 1; i < MaxIterations; i++)
-            {
-                a = -i * (i - 0.5);
-                b += 2;
-                d = b + a * d;
-                c = b + a / c;
-                if (Math.Abs(d) < Epsilon) d = Epsilon;
-                if (Math.Abs(c) < Epsilon) c = Epsilon;
-                d = 1 / d;
-                double del = d * c;
-                h *= del;
-                if (Math.Abs(del - 1.0) < Epsilon)
-                    return 1 - Math.Exp(-x * x) * h / Math.Sqrt(Math.PI);
-            }
-            throw new ArgumentException("Failed to converge");
+            // Save the sign of x
+            int sign = Math.Sign(x);
+            x = Math.Abs(x);
+
+            // A&S formula 7.1.26
+            double t = 1.0 / (1.0 + p * x);
+            double y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.Exp(-x * x);
+
+            return sign * y;
         }
 
         public static double Erfc(double x)
@@ -278,22 +259,33 @@ namespace MathLibrary
         #region Hypergeometric Functions
         public static double Hypergeometric2F1(double a, double b, double c, double z)
         {
-            if (Math.Abs(z) >= 1)
+            if (Math.Abs(z) >= 1.0)
                 throw new ArgumentException("|z| must be less than 1");
 
-            double term = 1;
-            double sum = 1;
-            
-            for (int n = 0; n < MaxIterations; n++)
+            if (c <= 0)
+                throw new ArgumentException("c must be positive");
+
+            if (c - a - b <= 0)
+                throw new ArgumentException("c - a - b must be positive for convergence");
+
+            double sum = 1.0;
+            double term = 1.0;
+            int n = 0;
+
+            while (Math.Abs(term) > Epsilon && n < MaxIterations)
             {
                 term *= (a + n) * (b + n) * z / ((c + n) * (n + 1));
                 sum += term;
-                
-                if (Math.Abs(term) < Epsilon * Math.Abs(sum))
-                    return sum;
+                n++;
+
+                if (double.IsInfinity(sum))
+                    throw new OverflowException("Series diverged");
             }
-            
-            throw new ArgumentException("Failed to converge");
+
+            if (n >= MaxIterations)
+                throw new InvalidOperationException("Failed to converge");
+
+            return sum;
         }
         #endregion
 

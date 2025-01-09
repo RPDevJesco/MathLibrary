@@ -20,28 +20,69 @@ namespace MathLibrary
             for (int i = 0; i < n; i++)
                 L[i, i] = 1.0;
 
+            // Compute matrix norm for scaling
+            double matrixNorm = 0.0;
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++)
+                    matrixNorm = Math.Max(matrixNorm, Math.Abs(U[i, j]));
+
+            double tolerance = matrixNorm * Epsilon * n;
+
+            // Compute row scaling factors
+            var rowScale = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double maxRowElement = 0.0;
+                for (int j = 0; j < n; j++)
+                {
+                    double absValue = Math.Abs(U[i, j]);
+                    if (absValue > maxRowElement)
+                        maxRowElement = absValue;
+                }
+                if (maxRowElement < tolerance)
+                    throw new InvalidOperationException("Matrix is singular or nearly singular");
+                rowScale[i] = 1.0 / maxRowElement;
+            }
+
             for (int k = 0; k < n - 1; k++)
             {
-                // Find pivot
+                // Find pivot using scaled comparison
                 int pivotRow = k;
-                double pivotValue = Math.Abs(U[k, k]);
+                double maxScaledPivot = Math.Abs(U[k, k]) * rowScale[k];
 
                 for (int i = k + 1; i < n; i++)
                 {
-                    if (Math.Abs(U[i, k]) > pivotValue)
+                    double scaledValue = Math.Abs(U[i, k]) * rowScale[i];
+                    if (scaledValue > maxScaledPivot)
                     {
-                        pivotValue = Math.Abs(U[i, k]);
+                        maxScaledPivot = scaledValue;
                         pivotRow = i;
                     }
                 }
 
-                // Check for numerical stability
-                if (pivotValue < Epsilon)
-                    throw new InvalidOperationException("Matrix is numerically singular");
+                // Check for numerical stability with tolerance
+                if (maxScaledPivot < tolerance)
+                {
+                    // Try to recover by finding a non-zero element in this column
+                    bool found = false;
+                    for (int i = k + 1; i < n && !found; i++)
+                    {
+                        if (Math.Abs(U[i, k]) >= tolerance)
+                        {
+                            pivotRow = i;
+                            found = true;
+                        }
+                    }
+                    if (!found)
+                        throw new InvalidOperationException("Matrix is singular or nearly singular");
+                }
 
                 // Swap rows if necessary
                 if (pivotRow != k)
                 {
+                    // Swap row scaling factors
+                    (rowScale[k], rowScale[pivotRow]) = (rowScale[pivotRow], rowScale[k]);
+
                     for (int j = 0; j < n; j++)
                     {
                         // Swap rows in U
@@ -55,12 +96,26 @@ namespace MathLibrary
                     exchanges++;
                 }
 
-                // Perform elimination
+                // Store the pivot element
+                double pivot = U[k, k];
+
+                // Perform elimination with scaled pivoting
                 for (int i = k + 1; i < n; i++)
                 {
-                    L[i, k] = U[i, k] / U[k, k];
-                    for (int j = k; j < n; j++)
-                        U[i, j] -= L[i, k] * U[k, j];
+                    double factor = U[i, k] / pivot;
+                    if (Math.Abs(factor) > 1e15) // Check for potential overflow
+                        throw new InvalidOperationException("Matrix is poorly conditioned");
+                        
+                    L[i, k] = factor;
+
+                    // Update row
+                    U[i, k] = 0.0; // Explicitly set to zero to avoid roundoff
+                    for (int j = k + 1; j < n; j++)
+                    {
+                        U[i, j] -= factor * U[k, j];
+                        if (Math.Abs(U[i, j]) < tolerance)
+                            U[i, j] = 0.0; // Clean up small values
+                    }
                 }
             }
 
@@ -73,56 +128,58 @@ namespace MathLibrary
         {
             int m = A.Rows;
             int n = A.Columns;
+            Matrix Q = new Matrix(m, n);
+            Matrix R = new Matrix(n, n);
 
-            Matrix Q = Matrix.Identity(m);
-            Matrix R = new Matrix(A);
+            // Copy A into Q
+            for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                Q[i, j] = A[i, j];
 
-            // Householder QR algorithm
-            for (int k = 0; k < Math.Min(m - 1, n); k++)
+            // Modified Gram-Schmidt process
+            for (int k = 0; k < n; k++)
             {
-                // Compute Householder vector
-                Vector x = new Vector(m - k);
+                // Compute the norm of column k
                 double norm = 0;
-
-                for (int i = k; i < m; i++)
-                {
-                    x[i - k] = R[i, k];
-                    norm += x[i - k] * x[i - k];
-                }
+                for (int i = 0; i < m; i++)
+                    norm += Q[i, k] * Q[i, k];
                 norm = Math.Sqrt(norm);
 
-                if (norm < Epsilon)
-                    continue;
-
-                // Adjust sign for better numerical stability
-                double s = (x[0] >= 0) ? 1 : -1;
-                double u1 = x[0] + s * norm;
-                double w = 1 / (u1 * norm);
-
-                // Apply Householder reflection to R
-                for (int j = k; j < n; j++)
+                if (norm > Epsilon)
                 {
-                    double sum = 0;
-                    for (int i = k; i < m; i++)
-                        sum += R[i, j] * x[i - k];
-                    sum *= w;
+                    // Store R[k,k] and normalize column k of Q
+                    R[k, k] = norm;
+                    for (int i = 0; i < m; i++)
+                        Q[i, k] /= norm;
 
-                    for (int i = k; i < m; i++)
-                        R[i, j] -= sum * x[i - k];
-                }
+                    // Remove projections of column k from remaining columns
+                    for (int j = k + 1; j < n; j++)
+                    {
+                        // Compute projection coefficient
+                        double dot = 0;
+                        for (int i = 0; i < m; i++)
+                            dot += Q[i, k] * Q[i, j];
 
-                // Accumulate Q
-                for (int j = 0; j < m; j++)
-                {
-                    double sum = 0;
-                    for (int i = k; i < m; i++)
-                        sum += Q[j, i] * x[i - k];
-                    sum *= w;
+                        // Store in R
+                        R[k, j] = dot;
 
-                    for (int i = k; i < m; i++)
-                        Q[j, i] -= sum * x[i - k];
+                        // Subtract projection
+                        for (int i = 0; i < m; i++)
+                            Q[i, j] -= dot * Q[i, k];
+                    }
                 }
             }
+
+            // Clean small values
+            for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                if (Math.Abs(Q[i, j]) < Epsilon)
+                    Q[i, j] = 0;
+
+            for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                if (Math.Abs(R[i, j]) < Epsilon || i > j)  // Set below-diagonal elements to 0
+                    R[i, j] = 0;
 
             return (Q, R);
         }

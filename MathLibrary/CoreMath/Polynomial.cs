@@ -37,16 +37,31 @@ namespace MathLibrary
 
         public Complex[] FindRoots(double tolerance = 1e-10, int maxIterations = 100)
         {
-            // Implement root finding using Durand-Kerner method
             int n = Degree;
             if (n == 0)
                 return Array.Empty<Complex>();
 
-            // Initialize with rough guesses for roots
+            // Scale coefficients to improve numerical stability
+            double maxCoeff = _coefficients.Max(Math.Abs);
+            var scaledCoeffs = _coefficients.Select(c => c / maxCoeff).ToArray();
+
+            // Estimate initial radius using bounds on roots
+            double rootBound = 1.0;
+            for (int i = 0; i < n; i++)
+            {
+                rootBound = Math.Max(rootBound, Math.Abs(scaledCoeffs[i] / scaledCoeffs[n]));
+            }
+            rootBound += 1.0; // Add margin for numerical stability
+
+            // Initialize with better guesses for roots using scaled radius
             var roots = new Complex[n];
             for (int i = 0; i < n; i++)
-                roots[i] = Complex.FromPolarCoordinates(1, 2 * Math.PI * i / n);
+            {
+                double angle = 2 * Math.PI * i / n;
+                roots[i] = Complex.FromPolar(rootBound, angle);
+            }
 
+            // Use Aberth-Ehrlich method (more stable than Durand-Kerner)
             for (int iter = 0; iter < maxIterations; iter++)
             {
                 bool converged = true;
@@ -54,18 +69,25 @@ namespace MathLibrary
 
                 for (int i = 0; i < n; i++)
                 {
-                    Complex numerator = EvaluateComplex(roots[i]);
-                    Complex denominator = Complex.One;
-
+                    Complex p = EvaluateComplex(roots[i]);
+                    Complex pDeriv = EvaluateComplexDerivative(roots[i]);
+                    
+                    Complex sum = Complex.Zero;
                     for (int j = 0; j < n; j++)
                     {
                         if (j != i)
-                            denominator *= roots[i] - roots[j];
+                        {
+                            sum += 1.0 / (roots[i] - roots[j]);
+                        }
                     }
 
-                    newRoots[i] = roots[i] - numerator / denominator;
-                    if (Complex.Abs(newRoots[i] - roots[i]) > tolerance)
+                    Complex correction = p / (pDeriv - p * sum);
+                    newRoots[i] = roots[i] - correction;
+
+                    if (Complex.Abs(correction) > tolerance * (1 + Complex.Abs(roots[i])))
+                    {
                         converged = false;
+                    }
                 }
 
                 roots = newRoots;
@@ -73,7 +95,33 @@ namespace MathLibrary
                     break;
             }
 
+            // Scale roots back
+            for (int i = 0; i < n; i++)
+            {
+                roots[i] = roots[i] * Math.Pow(maxCoeff, 1.0 / n);
+            }
+
+            // Clean up small imaginary parts
+            for (int i = 0; i < n; i++)
+            {
+                if (Math.Abs(roots[i].Imaginary) < tolerance)
+                {
+                    roots[i] = new Complex(roots[i].Real, 0);
+                }
+            }
+
             return roots;
+        }
+
+        private Complex EvaluateComplexDerivative(Complex x)
+        {
+            if (_coefficients.Length <= 1)
+                return Complex.Zero;
+
+            Complex result = _coefficients[^1] * (_coefficients.Length - 1);
+            for (int i = _coefficients.Length - 2; i >= 1; i--)
+                result = result * x + _coefficients[i] * i;
+            return result;
         }
 
         private Complex EvaluateComplex(Complex x)

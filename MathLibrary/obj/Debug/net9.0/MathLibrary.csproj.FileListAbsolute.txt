@@ -12,3 +12,4 @@ C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\refint\Mat
 C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.pdb
 C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.genruntimeconfig.cache
 C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\ref\MathLibrary.dll
+C:\Users\jglov\RiderProjects\MathLibrary\MathLibrary\obj\Debug\net9.0\MathLibrary.sourcelink.json

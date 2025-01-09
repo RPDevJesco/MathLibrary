@@ -79,6 +79,15 @@ namespace MathLibrary
                     result[j, i] = _elements[i, j];
             return result;
         }
+        
+        public double FrobeniusNorm()
+        {
+            double sum = 0;
+            for (int i = 0; i < Rows; i++)
+            for (int j = 0; j < Columns; j++)
+                sum += this[i, j] * this[i, j];
+            return Math.Sqrt(sum);
+        }
 
         // Basic matrix operations
         public static Matrix operator +(Matrix a, Matrix b)
