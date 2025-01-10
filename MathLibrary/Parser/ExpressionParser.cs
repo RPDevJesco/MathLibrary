@@ -188,9 +188,10 @@ namespace MathLibrary
                 if (char.IsWhiteSpace(c))
                     continue;
 
-                // Handle numbers (including negative numbers and unary plus)
+                // Handle numbers (including scientific notation)
                 if (char.IsDigit(c) || c == '.' || 
-                    ((c == '-' || c == '+') && i + 1 < expression.Length && char.IsDigit(expression[i + 1]) &&
+                    ((c == '-' || c == '+') && i + 1 < expression.Length && 
+                     (char.IsDigit(expression[i + 1]) || expression[i + 1] == '.') &&
                      (i == 0 || tokens.Count == 0 || tokens.Last().Type == TokenType.LeftParenthesis || 
                       tokens.Last().Type == TokenType.Operator || tokens.Last().Type == TokenType.Comma)))
                 {
@@ -203,27 +204,54 @@ namespace MathLibrary
                     currentToken.Append(c);
                     i++;
 
+                    // Read the integer/decimal part
                     while (i < expression.Length && 
                            (char.IsDigit(expression[i]) || expression[i] == '.'))
                     {
                         currentToken.Append(expression[i]);
                         i++;
                     }
+
+                    // Handle scientific notation
+                    if (i < expression.Length && 
+                        (expression[i] == 'e' || expression[i] == 'E'))
+                    {
+                        currentToken.Append(expression[i]);
+                        i++;
+
+                        // Handle optional sign in exponent
+                        if (i < expression.Length && 
+                            (expression[i] == '+' || expression[i] == '-'))
+                        {
+                            currentToken.Append(expression[i]);
+                            i++;
+                        }
+
+                        // Read exponent
+                        while (i < expression.Length && char.IsDigit(expression[i]))
+                        {
+                            currentToken.Append(expression[i]);
+                            i++;
+                        }
+                    }
                     i--;
 
-                    tokens.Add(new Token(TokenType.Number, currentToken.ToString()));
-
-                    // Check for implicit multiplication
-                    if (i + 1 < expression.Length && 
-                        (expression[i + 1] == '(' || 
-                         char.IsLetter(expression[i + 1]) ||
-                         expression[i + 1] == '_'))
+                    // Try to parse the number
+                    if (double.TryParse(currentToken.ToString(), 
+                        System.Globalization.NumberStyles.Float, 
+                        System.Globalization.CultureInfo.InvariantCulture, 
+                        out double value))
                     {
-                        tokens.Add(new Token(TokenType.Operator, "*"));
+                        tokens.Add(new Token(TokenType.Number, currentToken.ToString()));
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Invalid number format: {currentToken}");
                     }
                     continue;
                 }
 
+                // Rest of the method remains the same...
                 // Handle operators
                 if (_operations.ContainsKey(c.ToString()))
                 {
@@ -234,30 +262,12 @@ namespace MathLibrary
                 // Handle parentheses
                 if (c == '(')
                 {
-                    // Check for implicit multiplication before parenthesis
-                    if (tokens.Count > 0 && 
-                        (tokens.Last().Type == TokenType.Number ||
-                         tokens.Last().Type == TokenType.RightParenthesis ||
-                         tokens.Last().Type == TokenType.Constant))
-                    {
-                        tokens.Add(new Token(TokenType.Operator, "*"));
-                    }
                     tokens.Add(new Token(TokenType.LeftParenthesis, "("));
                     continue;
                 }
                 if (c == ')')
                 {
                     tokens.Add(new Token(TokenType.RightParenthesis, ")"));
-                    
-                    // Check for implicit multiplication after parenthesis
-                    if (i + 1 < expression.Length && 
-                        (char.IsDigit(expression[i + 1]) ||
-                         char.IsLetter(expression[i + 1]) ||
-                         expression[i + 1] == '(' ||
-                         expression[i + 1] == '_'))
-                    {
-                        tokens.Add(new Token(TokenType.Operator, "*"));
-                    }
                     continue;
                 }
 
@@ -291,16 +301,6 @@ namespace MathLibrary
                     else if (_constants.ContainsKey(identifier))
                     {
                         tokens.Add(new Token(TokenType.Constant, identifier));
-                        
-                        // Check for implicit multiplication after constant
-                        if (i + 1 < expression.Length && 
-                            (char.IsDigit(expression[i + 1]) ||
-                             char.IsLetter(expression[i + 1]) ||
-                             expression[i + 1] == '(' ||
-                             expression[i + 1] == '_'))
-                        {
-                            tokens.Add(new Token(TokenType.Operator, "*"));
-                        }
                     }
                     else
                     {

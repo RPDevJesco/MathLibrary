@@ -5,17 +5,27 @@ class Program
     static void Main()
     {
         Console.WriteLine("MathLibrary Showcase\n");
+        Calculator calc = new Calculator();
+        var expressions = new[]
+        {
+            "((((1+2)*(3+4))/(5+6))^2)",              // The one we just tested
+            "(((1+2)*(3+4))/((5+6)*(7+8)))",          // More complex division
+            "((1+2)^(3+4))/(5+6)",                    // Nested exponents
+            "(sin(pi/4)^2 + cos(pi/4)^2)",            // Nested trig with constants
+            "log(2, exp(sin(pi/4)))",                 // Nested functions
+        };
 
-        ShowBasicCalculator();
-        ShowSpecialFunctions();
-        ShowVectorOperations();
-        ShowMatrixOperations();
-        ShowComplexNumbers();
-        ShowNumericalIntegration();
-        ShowDifferentialEquations();
-        ShowPolynomialOperations();
-        ShowQuaternions();
-        ShowStatistics();
+        foreach (var expr in expressions)
+        {
+            try
+            {
+                Console.WriteLine($"{expr} = {calc.Evaluate(expr)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{expr} -> Error: {ex.Message}");
+            }
+        }
     }
 
     static void ShowBasicCalculator()
