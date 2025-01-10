@@ -26,14 +26,27 @@ namespace MathLibrary
         public override double Execute(double left, double right)
         {
             if (right == 0)
-                throw new DivideByZeroException("Division by zero is not allowed.");
+            {
+                if (left == 0)
+                    return double.NaN;  // 0/0 is undefined
+                if (left > 0)
+                    return double.PositiveInfinity;  // Positive divided by zero
+                return double.NegativeInfinity;  // Negative divided by zero
+            }
             return left / right;
         }
 
         public override Complex ExecuteComplex(Complex left, Complex right)
         {
             if (right.Real == 0 && right.Imaginary == 0)
-                throw new DivideByZeroException("Division by zero is not allowed.");
+            {
+                if (left.Real == 0 && left.Imaginary == 0)
+                    return new Complex(double.NaN, double.NaN);  // 0/0 is undefined
+            
+                // This should technically return a complex infinity point,
+                // but since Complex doesn't have that concept, we'll use the real infinity
+                return new Complex(double.PositiveInfinity, double.PositiveInfinity);
+            }
             return left / right;
         }
 

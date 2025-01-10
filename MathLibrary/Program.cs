@@ -8,6 +8,8 @@ class Program
         Calculator calc = new Calculator();
         var expressions = new[]
         {
+            "--++3",
+            "-(-(-3))",
             "((((1+2)*(3+4))/(5+6))^2)",              // The one we just tested
             "(((1+2)*(3+4))/((5+6)*(7+8)))",          // More complex division
             "((1+2)^(3+4))/(5+6)",                    // Nested exponents

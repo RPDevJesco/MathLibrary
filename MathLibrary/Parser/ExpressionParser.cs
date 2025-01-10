@@ -11,6 +11,7 @@ namespace MathLibrary
         {
             Number,
             Operator,
+            UnaryOperator,  // New type for unary operators
             LeftParenthesis,
             RightParenthesis,
             Function,
@@ -179,6 +180,7 @@ namespace MathLibrary
         {
             var tokens = new List<Token>();
             var currentToken = new System.Text.StringBuilder();
+            bool expectingValue = true;  // True if we're expecting a value or unary operator
 
             for (int i = 0; i < expression.Length; i++)
             {
@@ -188,19 +190,29 @@ namespace MathLibrary
                 if (char.IsWhiteSpace(c))
                     continue;
 
-                // Handle numbers (including scientific notation)
-                if (char.IsDigit(c) || c == '.' || 
-                    ((c == '-' || c == '+') && i + 1 < expression.Length && 
-                     (char.IsDigit(expression[i + 1]) || expression[i + 1] == '.') &&
-                     (i == 0 || tokens.Count == 0 || tokens.Last().Type == TokenType.LeftParenthesis || 
-                      tokens.Last().Type == TokenType.Operator || tokens.Last().Type == TokenType.Comma)))
+                // Handle consecutive unary operators
+                if ((c == '+' || c == '-') && expectingValue)
+                {
+                    int negCount = 0;
+                    while (i < expression.Length && (expression[i] == '+' || expression[i] == '-'))
+                    {
+                        if (expression[i] == '-')
+                            negCount++;
+                        i++;
+                    }
+                    i--;  // Back up one character since we'll increment in the loop
+                    
+                    // If odd number of minus signs, add a unary minus
+                    if (negCount % 2 == 1)
+                        tokens.Add(new Token(TokenType.UnaryOperator, "neg"));
+                        
+                    continue;
+                }
+
+                // Handle numbers
+                if (char.IsDigit(c) || c == '.')
                 {
                     currentToken.Clear();
-                    if (c == '+') // Skip unary plus
-                    {
-                        i++;
-                        c = expression[i];
-                    }
                     currentToken.Append(c);
                     i++;
 
@@ -243,6 +255,7 @@ namespace MathLibrary
                         out double value))
                     {
                         tokens.Add(new Token(TokenType.Number, currentToken.ToString()));
+                        expectingValue = false;
                     }
                     else
                     {
@@ -251,23 +264,36 @@ namespace MathLibrary
                     continue;
                 }
 
-                // Rest of the method remains the same...
                 // Handle operators
                 if (_operations.ContainsKey(c.ToString()))
                 {
-                    tokens.Add(new Token(TokenType.Operator, c.ToString()));
+                    if (!expectingValue)  // Binary operator
+                    {
+                        tokens.Add(new Token(TokenType.Operator, c.ToString()));
+                        expectingValue = true;
+                    }
                     continue;
                 }
 
                 // Handle parentheses
                 if (c == '(')
                 {
+                    if (!expectingValue && i > 0 && 
+                        (tokens.Last().Type == TokenType.Number || 
+                         tokens.Last().Type == TokenType.Constant ||
+                         tokens.Last().Type == TokenType.RightParenthesis))
+                    {
+                        // Implicit multiplication
+                        tokens.Add(new Token(TokenType.Operator, "*"));
+                    }
                     tokens.Add(new Token(TokenType.LeftParenthesis, "("));
+                    expectingValue = true;
                     continue;
                 }
                 if (c == ')')
                 {
                     tokens.Add(new Token(TokenType.RightParenthesis, ")"));
+                    expectingValue = false;
                     continue;
                 }
 
@@ -275,12 +301,19 @@ namespace MathLibrary
                 if (c == ',')
                 {
                     tokens.Add(new Token(TokenType.Comma, ","));
+                    expectingValue = true;
                     continue;
                 }
 
-                // Handle functions, constants, and variables
+                // Handle functions and constants
                 if (char.IsLetter(c) || c == '_')
                 {
+                    if (!expectingValue)
+                    {
+                        // Implicit multiplication before identifier
+                        tokens.Add(new Token(TokenType.Operator, "*"));
+                    }
+
                     currentToken.Clear();
                     currentToken.Append(c);
                     i++;
@@ -297,10 +330,12 @@ namespace MathLibrary
                     if (_functions.ContainsKey(identifier))
                     {
                         tokens.Add(new Token(TokenType.Function, identifier));
+                        expectingValue = false;
                     }
                     else if (_constants.ContainsKey(identifier))
                     {
                         tokens.Add(new Token(TokenType.Constant, identifier));
+                        expectingValue = false;
                     }
                     else
                     {
@@ -391,7 +426,7 @@ namespace MathLibrary
                 switch (token.Type)
                 {
                     case TokenType.Number:
-                        return new ExpressionNode(double.Parse(token.Value));
+                        return new ExpressionNode(double.Parse(token.Value, System.Globalization.CultureInfo.InvariantCulture));
                     case TokenType.Variable:
                         if (!_variables.TryGetValue(token.Value, out double varValue))
                             throw new ArgumentException($"Undefined variable: {token.Value}");
@@ -429,6 +464,19 @@ namespace MathLibrary
                         lowestPrecedence = operation.Precedence;
                         operationIndex = i;
                     }
+                }
+            }
+            
+            // Handle unary operator
+            if (tokens[start].Type == TokenType.UnaryOperator)
+            {
+                if (tokens[start].Value == "neg")
+                {
+                    return new ExpressionNode(
+                        _operations["*"],
+                        new ExpressionNode(-1),
+                        BuildExpressionTreeRecursive(tokens, start + 1, end)
+                    );
                 }
             }
 
